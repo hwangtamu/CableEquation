@@ -3,7 +3,7 @@ __author__ = 'Han Wang'
 import numpy as np
 import matplotlib.pyplot as plt
 
-
+#A resistor unit on membrane
 class R:
     current = np.array([])
     voltage = np.array([])
@@ -17,7 +17,7 @@ class R:
         self.voltage = volt
         self.current = volt/self.resistance
 
-
+#A resistor unit in cytoplasm
 class R_cyto:
     current = np.array([])
     voltage = np.array([])
@@ -33,7 +33,7 @@ class R_cyto:
         self.voltage = volt
         self.rear_voltage = volt - curr*self.resistor.resistance
 
-
+#A capacitor unit on membrane
 class C:
     current = np.array([])
     voltage = np.array([])
@@ -48,7 +48,7 @@ class C:
         whole_volt = np.append([0], volt)
         self.current = ([self.capacitance*(self.voltage[x]-whole_volt[x])/self.clock for x in range(len(self.voltage))])
 
-
+#A RC unit on membrane
 class RC:
     current = np.array([])
     voltage = np.array([])
@@ -68,11 +68,22 @@ class RC:
         self.current = self.resistor.current + self.capacitor.current
 
 
+#Combination of RC and R_cyto
+# ----R_cyto---
+#  |
+#  RC
+#  |
+#------GND
 class Unit:
-    current_in = np.array([])
-    current_out = np.array([])
-    voltage_in = np.array([])
-    voltage_out = np.array([])
+    l_c_in = np.array([])    # current from left and right
+    l_c_out = np.array([])
+    r_c_in = np.array([])
+    r_c_out = np.array([])
+    l_v_in = np.array([])    # voltage on left and right
+    l_v_out = np.array([])
+    r_v_in = np.array([])
+    r_v_out = np.array([])
+    voltage = np.array([])  # voltage at the junction between R_cyto and RC
     clock = 0
 
     def __init__(self, r_c, r, c, t):
@@ -80,20 +91,29 @@ class Unit:
         self.rc = RC(r, c, t)
         self.clock = t
 
-    def add_vc(self, volt, curr):
-        self.voltage_in = volt
-        self.current_in = curr
-        self.rc.add_voltage(volt)
-        self.r_cyto.add_vc(volt, curr - self.rc.current)
-        self.current_out = self.r_cyto.current
-        self.voltage_out = self.r_cyto.rear_voltage
+    def add_vc(self, l_v, r_v, l_c, r_c):
+        #initialize
+        self.l_v_in = l_v
+        self.l_c_in = l_c
+        self.r_v_in = r_v
+        self.r_c_in = r_c
+        # voltage, current from right side
+        self.r_cyto.add_vc(r_v, r_c)
+        self.rc.add_voltage(r_v-r_c*self.r_cyto.resistor.resistance)
+        self.r_v_out = self.r_cyto.rear_voltage
+        self.r_c_out = r_c - self.rc.current
+        # voltage, current from left side
+        self.rc.add_voltage(l_v)
+        self.r_cyto.add_vc(l_v, l_c - self.rc.current)
+        self.l_c_out = self.r_cyto.current
+        self.l_v_out = self.r_cyto.rear_voltage
 
 
 class Injection:
     n = 0
 
     def __init__(self, synapses):
-
+        self.n = len(synapses)
 # operation
 
 a = 3
